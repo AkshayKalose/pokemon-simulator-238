@@ -7,6 +7,7 @@ class MovesLoader(object):
         self.data = collections.defaultdict(dict)
         for _, r in self.df.iterrows():
             self.data[int(r['id'])] = {
+                'identifier': r['identifier'],
                 'type_id': int(r['type_id']),
                 'power': None if pandas.isnull(r['power']) else int(r['power']),
                 'pp': int(r['pp']),

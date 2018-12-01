@@ -5,7 +5,7 @@ from pokemon_stats_loader import PokemonStatsLoader
 from moves_loader import MovesLoader
 
 class PokemonLoader(object):
-    def __init__(self):
+    def __init__(self, moves_loader):
         self.df = pandas.read_csv('./data/pokemon.csv')
         self.df = self.df[self.df.id <= 151]
         self.data = {}
@@ -21,7 +21,7 @@ class PokemonLoader(object):
         self.pokemon_types_loader = PokemonTypesLoader()
         self.pokemon_moves_loader = PokemonMovesLoader()
         self.pokemon_stats_loader = PokemonStatsLoader()
-        self.moves_loader = MovesLoader()
+        self.moves_loader = moves_loader
 
     def getRandomPokemon(self):
         pokemon = dict(self.data[random.randint(1, 151)])
@@ -37,6 +37,8 @@ class PokemonLoader(object):
 
         pokemon['level'] = 100 #TODO: randomize?
         pokemon['stats'] = self.pokemon_stats_loader.getStats(pokemon['id'], pokemon['level'])
+        pokemon['current_hp'] = pokemon['stats'][1]
+        pokemon['stat_stages'] = dict([(i, 0) for i in range(1, 7)]) # TODO: Include Accuracy and Evasion
         return pokemon
 
     def getRandomTeam(self):
