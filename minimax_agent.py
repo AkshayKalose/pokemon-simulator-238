@@ -22,6 +22,7 @@ class MinimaxAgent(Agent):
                 maximum = max(candidates)
                 # print maximum
                 if depth == self.depth:
+                    # print candidates
                     return maximum
                 else:
                     return maximum[0]
@@ -34,4 +35,9 @@ class MinimaxAgent(Agent):
     def evaluationFunction(self, game):
         # TODO: Include status effects
         # TODO: make this into a float instead of int?
-        return game.agentCurrentHP(game.player) / game.agentTotalHP(game.player) - 3 * game.agentCurrentHP(game.opponent) / game.agentTotalHP(game.opponent)
+        result = float(game.agentCurrentHP(game.player)) / game.agentTotalHP(game.player) - 3 * float(game.agentCurrentHP(game.opponent)) / game.agentTotalHP(game.opponent)
+        if not game.isGameOver():
+            opponent_ailment = game.agentCurrentPokemon(game.opponent)['ailment']
+            if opponent_ailment[0] in ['sleep', 'paralysis'] and opponent_ailment[1] == 2:
+                result /= 1.1
+        return result

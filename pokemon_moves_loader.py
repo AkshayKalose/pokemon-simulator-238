@@ -1,7 +1,7 @@
 import pandas, collections, gc
 
 class PokemonMovesLoader(object):
-    def __init__(self):
+    def __init__(self, moves_loader):
         self.df = pandas.read_csv('./data/pokemon_moves.csv')
         self.df = self.df[(self.df.pokemon_id <= 151) & (self.df.version_group_id == 1)]
         self.data = collections.defaultdict(list)
@@ -10,11 +10,8 @@ class PokemonMovesLoader(object):
         del self.df
         gc.collect()
         self.df = pandas.DataFrame()
-        self.unavailable_moves = [114] # TODO: Implement these moves
+        self.unavailable_moves = set([120, 153]) # TODO: Implement these moves
+        self.moves_loader = moves_loader
 
     def getPossibleMoves(self, pokemon_id):
-        possible_moves = list(self.data[pokemon_id])
-        for unavailable_move in self.unavailable_moves:
-            if unavailable_move in possible_moves:
-                possible_moves.remove(unavailable_move)
-        return possible_moves
+        return [id for id in self.data[pokemon_id] if self.moves_loader.isMoveImplemented(id) and id not in self.unavailable_moves]

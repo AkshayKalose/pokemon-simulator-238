@@ -18,13 +18,19 @@ class PokemonLoader(object):
         gc.collect()
         self.df = pandas.DataFrame()
 
-        self.pokemon_types_loader = PokemonTypesLoader()
-        self.pokemon_moves_loader = PokemonMovesLoader()
-        self.pokemon_stats_loader = PokemonStatsLoader()
         self.moves_loader = moves_loader
+        self.pokemon_types_loader = PokemonTypesLoader()
+        self.pokemon_moves_loader = PokemonMovesLoader(self.moves_loader)
+        self.pokemon_stats_loader = PokemonStatsLoader()
+        self.unavailable_ids = set([132])
 
     def getRandomPokemon(self):
-        pokemon = dict(self.data[random.randint(1, 151)])
+        pokemon_id = None
+        while True:
+            pokemon_id = random.randint(1, 151)
+            if pokemon_id not in self.unavailable_ids:
+                break
+        pokemon = dict(self.data[pokemon_id])
         pokemon['type'] = self.pokemon_types_loader.getTypes(pokemon['id'])
         pokemon['moves'] = []
         # while True:
@@ -38,7 +44,8 @@ class PokemonLoader(object):
         pokemon['level'] = 100 #TODO: randomize?
         pokemon['stats'] = self.pokemon_stats_loader.getStats(pokemon['id'], pokemon['level'])
         pokemon['current_hp'] = pokemon['stats'][1]
-        pokemon['stat_stages'] = dict([(i, 0) for i in range(1, 7)]) # TODO: Include Accuracy and Evasion
+        pokemon['stat_stages'] = dict([(i, 0) for i in range(1, 9)])
+        pokemon['ailment'] = ['none', 0]
         return pokemon
 
     def getRandomTeam(self):

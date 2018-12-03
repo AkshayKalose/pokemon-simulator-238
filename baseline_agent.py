@@ -8,9 +8,15 @@ class BaselineAgent(Agent):
         else:
             from_pokemon = game.opponent.getState()['team'][game.opponent.getState()['current_active_pokemon']]
             to_pokemon = game.player.getState()['team'][game.player.getState()['current_active_pokemon']]
-        from_move_id = from_pokemon['moves'][0]
-        best_damage = 0
-        for move_id in from_pokemon['moves']:
+
+        legal_actions = game.getLegalActions(self.name)
+        if len(legal_actions) == 1:
+            return legal_actions[0]
+
+        from_move_id = None
+        best_damage = -1
+        for legal_action in legal_actions:
+            move_id = from_pokemon['moves'][legal_action]
             move = game.moves_loader.getMove(move_id)
             power = 0 if move['power'] == None else move['power']
             # damage_to_inflict = (( (2 * from_pokemon['level'] / 5 + 2) * power * from_pokemon['stats'][move['damage_class_id']] / to_pokemon['stats'][move['damage_class_id'] + 1]) / 50 + 2)

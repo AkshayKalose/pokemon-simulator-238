@@ -15,7 +15,8 @@ class Game(object):
         return sum([pokemon['stats'][1] for pokemon in agent.getState()['team']])
 
     def agentCurrentPokemon(self, agent):
-        return agent.getState()['team'][agent.getState()['current_active_pokemon']]
+        index = agent.getState()['current_active_pokemon']
+        return agent.getState()['team'][index] if index < 7 else None
 
     def isGameOver(self):
         if self.agentCurrentHP(self.player) == 0:
@@ -77,6 +78,18 @@ class Game(object):
             successor.performMove(successor.getState(), opponent_pokemon, player_pokemon, move, action)
             if player_pokemon['current_hp'] == 0:
                 successor.player.getState()['current_active_pokemon'] += 1
+
+        # Ailment
+        if name =='player':
+            if player_pokemon['current_hp'] > 0 and player_pokemon['ailment'][0] != 'none':
+                self.performAilment(player_pokemon)
+                if player_pokemon['current_hp'] == 0:
+                    successor.player.getState()['current_active_pokemon'] += 1
+        else:
+            if opponent_pokemon['current_hp'] > 0 and opponent_pokemon['ailment'][0] != 'none':
+                self.performAilment(opponent_pokemon)
+                if opponent_pokemon['current_hp'] == 0:
+                    successor.opponent.getState()['current_active_pokemon'] += 1
         return successor
 
     def performTurn(self):
@@ -100,6 +113,18 @@ class Game(object):
             opponent_move = self.moves_loader.getMove(165)
         else:
             opponent_move = self.moves_loader.getMove(opponent_pokemon['moves'][opponent_action])
+
+        # ### DEBUG OUTPUT
+        # player_moves = []
+        # for i, m_id in enumerate(player_pokemon['moves']):
+        #     move = self.moves_loader.getMove(m_id)
+        #     player_moves.append('{}|{}'.format(move['identifier'], player_pokemon['pp'][i]))
+        # opponent_moves = []
+        # for i, m_id in enumerate(opponent_pokemon['moves']):
+        #     move = self.moves_loader.getMove(m_id)
+        #     opponent_moves.append('{}|{}'.format(move['identifier'], opponent_pokemon['pp'][i]))
+        # print '{}({})({})({}) -> {} | {} <- {}({})({})({})'.format(player_pokemon['identifier'], player_pokemon['ailment'][0], int(player_pokemon['current_hp']), ', '.join(player_moves), player_move['identifier'], opponent_move['identifier'], opponent_pokemon['identifier'], opponent_pokemon['ailment'][0], int(opponent_pokemon['current_hp']), ', '.join(opponent_moves))
+        # ### END DEBUG OUTPUT
 
         if player_move['priority'] > opponent_move['priority']:
             player_first = True
@@ -130,6 +155,24 @@ class Game(object):
             else:
                 self.player.getState()['current_active_pokemon'] += 1
 
+        # Ailment
+        if player_pokemon['current_hp'] > 0 and player_pokemon['ailment'][0] != 'none':
+            self.performAilment(player_pokemon)
+            if player_pokemon['current_hp'] == 0:
+                self.player.getState()['current_active_pokemon'] += 1
+        if opponent_pokemon['current_hp'] > 0 and opponent_pokemon['ailment'][0] != 'none':
+            self.performAilment(opponent_pokemon)
+            if opponent_pokemon['current_hp'] == 0:
+                self.opponent.getState()['current_active_pokemon'] += 1
+
+
+    def performAilment(self, pokemon):
+        ailment = pokemon['ailment'][0]
+        if ailment in ['sleep', 'paralysis']:
+            pass # Handle count decrement in performMove
+        elif ailment == 'poison':
+            pokemon['current_hp'] -= 1.0 / 16 * self.getStat(pokemon, 1)
+            pokemon['current_hp'] = max(0, pokemon['current_hp'])
 
     def run(self):
         counter = 0
@@ -147,19 +190,90 @@ class Game(object):
             return 0
         elif target_id in set([1, 6, 8, 9, 10, 11]):
             return 1
-        raise Exception('move_target not implemented.' + str(target_id) + " " + str(move_id))
+        raise Exception('move_target({}) not implemented. Move: {}'.format(str(target_id), str(move_id)))
 
-    def performMove(self, game, from_pokemon, to_pokemon, move, move_index):
-        # TODO: Implement pokemon move state to reduce PP
-        self.getMoveTarget(move['identifier'], move['target_id'])
+    def calculateDamage(self, from_pokemon, to_pokemon, move):
         move_damage_class = move['damage_class_id']
         power = 0 if move['power'] == None else move['power']
         damage_to_inflict = (( (2 * from_pokemon['level'] / 5 + 2) * power * self.getStat(from_pokemon,move_damage_class) / self.getStat(to_pokemon, move_damage_class + 1)) / 50 + 2)
-        modifier = 1
+        type_modifier = 1.0
+        same_type_attack_bonus = 1.0
         for t in to_pokemon['type']:
-            modifier *= self.type_efficacy_loader.getTypeEfficacy(move['type_id'], t)
+            type_modifier *= self.type_efficacy_loader.getTypeEfficacy(move['type_id'], t)
+            if move['type_id'] == t:
+                same_type_attack_bonus = 1.5
+        modifier = type_modifier * same_type_attack_bonus
         damage_to_inflict *= modifier
-        to_pokemon['current_hp'] = max(to_pokemon['current_hp'] - damage_to_inflict, 0)
+        return damage_to_inflict
+
+    def statNameToIndex(self, name):
+        if name == 'hp':
+            return 1
+        elif name == 'attack':
+            return 2
+        elif name == 'defense':
+            return 3
+        elif name == 'special-attack':
+            return 4
+        elif name == 'special-defense':
+            return 5
+        elif name == 'speed':
+            return 6
+        elif name == 'accuracy':
+            return 7
+        elif name == 'evasion':
+            return 8
+        raise Exception('Stat({}) does not have an index.'.format(name))
+
+    def performMove(self, game, from_pokemon, to_pokemon, move, move_index):
+        # Ailment
+        if from_pokemon['ailment'][0] in ['sleep', 'paralysis']:
+            from_pokemon['ailment'][1] -= 1
+            if from_pokemon['ailment'][1] == 0:
+                from_pokemon['ailment'][0] = 'none'
+            return
+
+        move_target = self.getMoveTarget(move['identifier'], move['target_id'])
+        if move_target == 0:
+            target_pokemon = from_pokemon
+        else:
+            # move_target == 1
+            target_pokemon = to_pokemon
+
+        move_category = move['meta']['category']['name']
+        if move_category in ['damage', 'damage+lower', 'damage+ailment', 'damage+raise', 'damage+heal']:
+            # Ignore stat changes and ailment
+            damage_to_inflict = self.calculateDamage(from_pokemon, target_pokemon, move)
+            target_pokemon['current_hp'] = max(target_pokemon['current_hp'] - damage_to_inflict, 0)
+            if move_category == 'damage+heal':
+                max_hp = self.getStat(from_pokemon, 1)
+                from_pokemon['current_hp'] = min(from_pokemon['current_hp'] + float(int(move['meta']['drain'])) / 100 * max_hp, max_hp)
+        elif move_category == 'ailment':
+            ailment = move['meta']['ailment']['name']
+            if ailment in ['sleep', 'poison', 'paralysis']:
+                if target_pokemon['ailment'][0] == 'none':
+                    target_pokemon['ailment'][0] = ailment
+                    if ailment in ['sleep', 'paralysis']:
+                        target_pokemon['ailment'][1] = 2
+                else:
+                    pass # Cannot change ailment of target pokemon
+            else:
+                pass # Ignore other ailments
+        elif move_category == 'net-good-stats':
+            for stat_change in move['stat_changes']:
+                stat_index = self.statNameToIndex(stat_change['stat']['name'])
+                new_stat_stage = target_pokemon['stat_stages'][stat_index] + stat_change['change']
+                if new_stat_stage < -6:
+                    new_stat_stage = -6
+                elif new_stat_stage > 6:
+                    new_stat_stage = 6
+                target_pokemon['stat_stages'][stat_index] = new_stat_stage
+        elif move_category == 'heal':
+            max_hp = self.getStat(target_pokemon, 1)
+            target_pokemon['current_hp'] = min(target_pokemon['current_hp'] + float(int(move['meta']['drain'])) / 100 * max_hp, max_hp)
+        else:
+            raise Exception('Move category({}) not implemented. Move: {}'.format(move_category, move['identifier']))
+
         if 0 <= move_index < 4: # Struggle doesn't have PP
             from_pokemon['pp'][move_index] -= 1
 
