@@ -22,6 +22,9 @@ class HumanAgent(Agent):
 
         for i, move_id in enumerate(player_pokemon['moves']):
             move = self.moves_loader.getMove(move_id)
-            self.gui.setActionText(i, move['identifier'])
+            self.gui.setActionText(i, move['identifier'] + " PP: " + str(player_pokemon['pp'][i]))
 
-        return self.gui.getAction()
+        valid_action = None
+        while valid_action not in game.getLegalActions(self.name):
+            valid_action = self.gui.getAction()
+        return valid_action

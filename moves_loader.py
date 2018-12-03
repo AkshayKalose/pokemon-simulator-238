@@ -1,4 +1,4 @@
-import pandas, collections, gc
+import pandas, collections, gc, json
 
 class MovesLoader(object):
     def __init__(self):
@@ -6,7 +6,13 @@ class MovesLoader(object):
         self.df = self.df[self.df.generation_id == 1]
         self.data = collections.defaultdict(dict)
         for _, r in self.df.iterrows():
-            self.data[int(r['id'])] = {
+            id = int(r['id'])
+            with open('./pokeapi/move/' + str(id) + '/index.json') as f:
+                data = json.load(f)
+                meta = data['meta']
+                stat_changes = data['stat_changes']
+                del data
+            self.data[id] = {
                 'identifier': r['identifier'],
                 'type_id': int(r['type_id']),
                 'power': None if pandas.isnull(r['power']) else int(r['power']),
@@ -23,4 +29,4 @@ class MovesLoader(object):
         self.df = pandas.DataFrame()
 
     def getMove(self, move_id):
-        return dict(self.data[move_id])
+        return self.data[move_id]

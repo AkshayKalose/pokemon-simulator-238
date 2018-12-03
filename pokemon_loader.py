@@ -34,7 +34,7 @@ class PokemonLoader(object):
         #     if len(pokemon['moves']) == 4:
         #         break
         pokemon['moves'] = random.sample(self.pokemon_moves_loader.getPossibleMoves(pokemon['id']), min(len(self.pokemon_moves_loader.getPossibleMoves(pokemon['id'])), 4))
-
+        pokemon['pp'] = [self.moves_loader.getMove(move_id)['pp'] for move_id in pokemon['moves']]
         pokemon['level'] = 100 #TODO: randomize?
         pokemon['stats'] = self.pokemon_stats_loader.getStats(pokemon['id'], pokemon['level'])
         pokemon['current_hp'] = pokemon['stats'][1]

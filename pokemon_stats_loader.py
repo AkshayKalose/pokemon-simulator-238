@@ -12,11 +12,11 @@ class PokemonStatsLoader(object):
         self.df = pandas.DataFrame()
 
     def getBaseStats(self, pokemon_id):
-        return dict(self.data[pokemon_id])
+        return self.data[pokemon_id]
 
     def getStats(self, pokemon_id, pokemon_level):
         #TODO: Currently disregards IV, and EV
-        stats = self.getBaseStats(pokemon_id)
+        stats = dict(self.getBaseStats(pokemon_id))
         if pokemon_level != 100:
             raise Exception('TODO: Implement calculating stats')
         stats[1] = 110 + 2 * stats[1]

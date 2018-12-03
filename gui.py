@@ -38,7 +38,7 @@ class GUI(threading.Thread):
         self.root = Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.callback)
         self.root.title('Pokemon Simulator')
-        self.root.geometry('400x400')
+        self.root.geometry('500x500')
 
         self.opponentInfo = Frame(self.root).grid(row=0, column=0)
         Label(self.opponentInfo, text="Opponent's Pokemon: ").grid(row=0, column=0, sticky=W)
@@ -48,20 +48,20 @@ class GUI(threading.Thread):
         self.opponentPokemonHP = StringVar()
         Label(self.opponentInfo, textvariable=self.opponentPokemonHP).grid(row=0, column=3, sticky=W)
 
-        self.playerInfo = Frame(self.root).grid(row=1, column=0)
-        Label(self.playerInfo, text="Player's Pokemon: ").grid(row=1, column=0, sticky=W)
+        self.playerInfo = Frame(self.root).grid(row=2, column=0)
+        Label(self.playerInfo, text="Player's Pokemon: ").grid(row=2, column=0, sticky=W)
         self.playerPokemonName = StringVar()
-        Label(self.playerInfo, textvariable=self.playerPokemonName).grid(row=1, column=1, sticky=W)
-        Label(self.playerInfo, text="HP: ").grid(row=1, column=2, sticky=W)
+        Label(self.playerInfo, textvariable=self.playerPokemonName).grid(row=2, column=1, sticky=W)
+        Label(self.playerInfo, text="HP: ").grid(row=2, column=2, sticky=W)
         self.playerPokemonHP = StringVar()
-        Label(self.playerInfo, textvariable=self.playerPokemonHP).grid(row=1, column=3, sticky=W)
+        Label(self.playerInfo, textvariable=self.playerPokemonHP).grid(row=2, column=3, sticky=W)
 
-        self.actions = Frame(self.root).grid(row=2, column=0, sticky=W)
+        self.actions = Frame(self.root).grid(row=4, column=0, sticky=W)
         self.actionText = [StringVar() for _ in range(4)]
-        Button(self.actions, textvariable=self.actionText[0], width=12, command=lambda: self.action(0)).grid(row=2, column=0, sticky=W)
-        Button(self.actions, textvariable=self.actionText[1], width=12, command=lambda: self.action(1)).grid(row=2, column=1, sticky=W)
-        Button(self.actions, textvariable=self.actionText[2], width=12, command=lambda: self.action(2)).grid(row=2, column=2, sticky=W)
-        Button(self.actions, textvariable=self.actionText[3], width=12, command=lambda: self.action(3)).grid(row=2, column=3, sticky=W)
+        Button(self.actions, textvariable=self.actionText[0], width=15, command=lambda: self.action(0)).grid(row=4, column=0, sticky=W)
+        Button(self.actions, textvariable=self.actionText[1], width=15, command=lambda: self.action(1)).grid(row=4, column=1, sticky=W)
+        Button(self.actions, textvariable=self.actionText[2], width=15, command=lambda: self.action(2)).grid(row=4, column=2, sticky=W)
+        Button(self.actions, textvariable=self.actionText[3], width=15, command=lambda: self.action(3)).grid(row=4, column=3, sticky=W)
 
         self.ready = True
         self.root.mainloop()

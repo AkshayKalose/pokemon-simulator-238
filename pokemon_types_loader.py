@@ -12,4 +12,4 @@ class PokemonTypesLoader(object):
         self.df = pandas.DataFrame()
 
     def getTypes(self, pokemon_id):
-        return list(self.data[pokemon_id])
+        return self.data[pokemon_id]

@@ -33,5 +33,5 @@ class MinimaxAgent(Agent):
 
     def evaluationFunction(self, game):
         # TODO: Include status effects
-        # return float(sum([pokemon['current_hp'] for pokemon in game.player.getState()['team']]) + 1) / float(sum([pokemon['current_hp'] for pokemon in game.opponent.getState()['team']]) + 1)
-        return sum([pokemon['current_hp'] for pokemon in game.player.getState()['team']])/sum([pokemon['stats'][1] for pokemon in game.player.getState()['team']]) - 3 * sum([pokemon['current_hp'] for pokemon in game.opponent.getState()['team']])/sum([pokemon['stats'][1] for pokemon in game.opponent.getState()['team']])
+        # TODO: make this into a float instead of int?
+        return game.agentCurrentHP(game.player) / game.agentTotalHP(game.player) - 3 * game.agentCurrentHP(game.opponent) / game.agentTotalHP(game.opponent)

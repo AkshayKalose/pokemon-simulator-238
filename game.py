@@ -8,10 +8,19 @@ class Game(object):
         self.player = player
         self.opponent = opponent
 
+    def agentCurrentHP(self, agent):
+        return sum([pokemon['current_hp'] for pokemon in agent.getState()['team']])
+
+    def agentTotalHP(self, agent):
+        return sum([pokemon['stats'][1] for pokemon in agent.getState()['team']])
+
+    def agentCurrentPokemon(self, agent):
+        return agent.getState()['team'][agent.getState()['current_active_pokemon']]
+
     def isGameOver(self):
-        if sum([pokemon['current_hp'] for pokemon in self.player.getState()['team']]) == 0:
+        if self.agentCurrentHP(self.player) == 0:
             return 'opponent'
-        if sum([pokemon['current_hp'] for pokemon in self.opponent.getState()['team']]) == 0:
+        if self.agentCurrentHP(self.opponent) == 0:
             return 'player'
         return False
 
@@ -60,29 +69,37 @@ class Game(object):
         opponent_pokemon = successor.opponent.getState()['team'][successor.opponent.getState()['current_active_pokemon']]
         if name == 'player':
             move = successor.moves_loader.getMove(player_pokemon['moves'][action])
-            successor.performMove(successor.getState(), player_pokemon, opponent_pokemon, move)
+            successor.performMove(successor.getState(), player_pokemon, opponent_pokemon, move, action)
             if opponent_pokemon['current_hp'] == 0:
                 successor.opponent.getState()['current_active_pokemon'] += 1
         else:
             move = successor.moves_loader.getMove(opponent_pokemon['moves'][action])
-            successor.performMove(successor.getState(), opponent_pokemon, player_pokemon, move)
+            successor.performMove(successor.getState(), opponent_pokemon, player_pokemon, move, action)
             if player_pokemon['current_hp'] == 0:
                 successor.player.getState()['current_active_pokemon'] += 1
         return successor
 
     def performTurn(self):
         # Get active Pokemon
-        player_pokemon = self.player.getState()['team'][self.player.getState()['current_active_pokemon']]
-        opponent_pokemon = self.opponent.getState()['team'][self.opponent.getState()['current_active_pokemon']]
+        player_pokemon = self.agentCurrentPokemon(self.player)
+        opponent_pokemon = self.agentCurrentPokemon(self.opponent)
 
-        # 0 - 3 = Perform a Move, 4 = Switch
+        # -1 = Struggle, 0 - 3 = Perform a Move, 4 = Switch
         player_action = self.player.getAction(self)
         opponent_action = self.opponent.getAction(self)
 
         # TODO: Implement Switch (If so, be sure the update the pokemon before performing move)
 
-        player_move = self.moves_loader.getMove(player_pokemon['moves'][player_action])
-        opponent_move = self.moves_loader.getMove(opponent_pokemon['moves'][opponent_action])
+        # Account for Struggle (When pokemon is out of PP):
+        if player_action == -1:
+            player_move = self.moves_loader.getMove(165)
+        else:
+            player_move = self.moves_loader.getMove(player_pokemon['moves'][player_action])
+
+        if opponent_action == -1:
+            opponent_move = self.moves_loader.getMove(165)
+        else:
+            opponent_move = self.moves_loader.getMove(opponent_pokemon['moves'][opponent_action])
 
         if player_move['priority'] > opponent_move['priority']:
             player_first = True
@@ -97,17 +114,17 @@ class Game(object):
                 player_first = random.randint(0, 1)
 
         if player_first:
-            self.performMove(self.getState(), player_pokemon, opponent_pokemon, player_move)
+            self.performMove(self.getState(), player_pokemon, opponent_pokemon, player_move, player_action)
             if opponent_pokemon['current_hp'] > 0:
-                self.performMove(self.getState(), opponent_pokemon, player_pokemon, opponent_move)
+                self.performMove(self.getState(), opponent_pokemon, player_pokemon, opponent_move, opponent_action)
                 if player_pokemon['current_hp'] == 0:
                     self.player.getState()['current_active_pokemon'] += 1
             else:
                 self.opponent.getState()['current_active_pokemon'] += 1
         else:
-            self.performMove(self.getState(), opponent_pokemon, player_pokemon, opponent_move)
+            self.performMove(self.getState(), opponent_pokemon, player_pokemon, opponent_move, opponent_action)
             if player_pokemon['current_hp'] > 0:
-                self.performMove(self.getState(), player_pokemon, opponent_pokemon, player_move)
+                self.performMove(self.getState(), player_pokemon, opponent_pokemon, player_move, player_action)
                 if opponent_pokemon['current_hp'] == 0:
                     self.opponent.getState()['current_active_pokemon'] += 1
             else:
@@ -124,8 +141,17 @@ class Game(object):
         else:
             return self.isGameOver()
 
-    def performMove(self, game, from_pokemon, to_pokemon, move):
+    def getMoveTarget(self, move_id, target_id):
+        # Returns 0 if move affects self, and 1 if move affects the other pokemon
+        if target_id in set([3, 4, 5, 7, 13]):
+            return 0
+        elif target_id in set([1, 6, 8, 9, 10, 11]):
+            return 1
+        raise Exception('move_target not implemented.' + str(target_id) + " " + str(move_id))
+
+    def performMove(self, game, from_pokemon, to_pokemon, move, move_index):
         # TODO: Implement pokemon move state to reduce PP
+        self.getMoveTarget(move['identifier'], move['target_id'])
         move_damage_class = move['damage_class_id']
         power = 0 if move['power'] == None else move['power']
         damage_to_inflict = (( (2 * from_pokemon['level'] / 5 + 2) * power * self.getStat(from_pokemon,move_damage_class) / self.getStat(to_pokemon, move_damage_class + 1)) / 50 + 2)
@@ -134,9 +160,14 @@ class Game(object):
             modifier *= self.type_efficacy_loader.getTypeEfficacy(move['type_id'], t)
         damage_to_inflict *= modifier
         to_pokemon['current_hp'] = max(to_pokemon['current_hp'] - damage_to_inflict, 0)
+        if 0 <= move_index < 4: # Struggle doesn't have PP
+            from_pokemon['pp'][move_index] -= 1
 
     def getLegalActions(self, name):
-        # TODO: Do not return action if PP = 0 of a move, also does a pokemon faint if no PP?
+        # TODO: Switching Pokemon
         agent = self.player if name == 'player' else self.opponent
-        current_pokemon = agent.getState()['team'][agent.getState()['current_active_pokemon']]
-        return [i for i in range(len(current_pokemon['moves']))]
+        current_pokemon = self.agentCurrentPokemon(agent)
+        legal_actions = [i for i in range(len(current_pokemon['moves'])) if current_pokemon['pp'][i] > 0]
+        if len(legal_actions) == 0:
+            legal_actions.append(-1) # Struggle
+        return legal_actions

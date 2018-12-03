@@ -10,6 +10,11 @@ class PokemonMovesLoader(object):
         del self.df
         gc.collect()
         self.df = pandas.DataFrame()
+        self.unavailable_moves = [114] # TODO: Implement these moves
 
     def getPossibleMoves(self, pokemon_id):
-        return list(self.data[pokemon_id])
+        possible_moves = list(self.data[pokemon_id])
+        for unavailable_move in self.unavailable_moves:
+            if unavailable_move in possible_moves:
+                possible_moves.remove(unavailable_move)
+        return possible_moves
