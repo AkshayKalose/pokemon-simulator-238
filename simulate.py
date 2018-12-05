@@ -15,12 +15,12 @@ pokemon_loader = PokemonLoader(moves_loader)
 type_efficacy_loader = TypeEfficacyLoader()
 
 counter = {'player': 0, 'opponent': 0, 'timeout': 0}
-while counter['player'] + counter['opponent'] < 1000:
+while counter['player'] + counter['opponent'] < 1:
     print counter
     # player = MinimaxAgent('player', pokemon_loader.getRandomTeam(), 1)
-    player = MinimaxPruningAgent('player', pokemon_loader.getRandomTeam(), 2)
+    # player = MinimaxPruningAgent('player', pokemon_loader.getRandomTeam(), 2)
     # player = BaselineAgent('player', pokemon_loader.getRandomTeam())
-    # player = HumanAgent('player', pokemon_loader.getRandomTeam(), moves_loader)
+    player = HumanAgent('player', pokemon_loader.getRandomTeam(), moves_loader)
     # player = RandomAgent('player', pokemon_loader.getRandomTeam())
     opponent = BaselineAgent('opponent', pokemon_loader.getRandomTeam())
     # opponent = RandomAgent('opponent', pokemon_loader.getRandomTeam())
